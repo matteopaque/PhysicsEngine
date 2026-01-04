@@ -16,7 +16,10 @@ add_executable(openglSetup main.cpp
         Sphere.cpp
         Sphere.h
         Particle.cpp
-        Particle.h)
+        Particle.h
+        Timer.cpp
+        Timer.h
+        ParticleForceGenerator.h)
 target_link_libraries(openglSetup glfw)
 target_link_libraries(openglSetup glad)
 target_link_libraries(openglSetup glm::glm)

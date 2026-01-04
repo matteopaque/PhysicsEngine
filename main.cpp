@@ -17,6 +17,7 @@
 #include "Texture.h"
 #include "Sphere.h"
 #include "Particle.h"
+#include "Timer.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow * window,double xpos, double ypos);
@@ -243,7 +244,13 @@ int main()
     double lastTime = glfwGetTime();
     double thisTime, deltaTime;
 
-     particleArray.push_back(Particle({0.f, 10.f, 0.f}, {0.f, -1.f, 0.f}, 1.f));
+    Timer timer;
+    timer.addTask(0.05, [&](int Times)
+    {
+        particleArray.push_back(Particle({0.f, 0.f, 0.f}, {glm::cos(glfwGetTime())*5, 10.f, glm::sin(glfwGetTime())*5}, 1.f));
+
+        return true;
+    });
     while (!glfwWindowShouldClose(window))
     {
         thisTime = glfwGetTime();
@@ -254,10 +261,14 @@ int main()
         processInput(window, deltaTime);
 
         //update world
-        for (auto &particle : particleArray)
+        timer.update(deltaTime);
+        std::vector<std::vector<Particle>::iterator> toRemoveArray;
+        for (auto particle = particleArray.begin(); particle < particleArray.end(); ++particle)
         {
-            particle.integrate(deltaTime);
+            particle->integrate(deltaTime);
         }
+        std::erase_if(particleArray, [](const Particle& particle){return particle.shouldRemove();});
+
 
         //clear buffers
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -345,7 +356,13 @@ void processInput(GLFWwindow* window, double deltaTime)
     if (glfwGetKey(window, GLFW_KEY_S)== GLFW_PRESS)
         cameraPos += glm::normalize(glm::cross(frontLateral, cameraUp)) * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_A)== GLFW_PRESS)
+
         cameraPos -= glm::normalize(glm::cross(frontLateral, cameraUp)) * cameraSpeed;
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT))
+    {
+        particleArray.push_back(Particle(cameraPos + cameraFront - 0.6f *glm::cross(glm::cross(cameraFront, cameraUp), cameraFront),
+            cameraFront*5.f + glm::vec3({0.f, 4.f, 0.f}), 0.5f));
+    }
 
 }
 float lastX = 400, lastY = 300;

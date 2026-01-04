@@ -13,6 +13,7 @@ private:
     glm::vec3 position;
     glm::vec3 velocity;
     glm::vec3 Acceleration;
+    glm::vec3 ForceAccumulate;
 
     float inverseMass = 1.f;
 
@@ -20,9 +21,13 @@ public:
     float radius = 1.f;
     float dampening = 0.995f;
     void integrate (float deltaTime);
-    Particle(glm::vec3 inposition, glm::vec3 invelocity, float inradius)
-        : position(inposition), velocity(invelocity), radius(inradius), Acceleration(glm::vec3({0.f, -10.f, 0.f}))
+    bool shouldRemove() const;
+    void clearForce();
+    void addForce(glm::vec3 toAdd);
+    Particle(glm::vec3 inposition, glm::vec3 invelocity, float inradius, float mass = 1.f)
+        : position(inposition), velocity(invelocity), radius(inradius), Acceleration(glm::vec3({0.f, -20.f, 0.f}))
     {
+        inverseMass = 1.f/mass;
     }
     const glm::vec3  getPosition()
     {
@@ -31,12 +36,6 @@ public:
 };
 
 
-inline void Particle::integrate(float deltaTime)
-{
-    position = position + (velocity * deltaTime);
 
-    velocity *= std::powf(dampening, deltaTime);
-    velocity = velocity + (Acceleration * deltaTime);
-}
 
 #endif //OPENGLSETUP_PARTICLE_H
