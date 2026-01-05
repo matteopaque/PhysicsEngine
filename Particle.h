@@ -28,6 +28,7 @@ public:
         : position(inposition), velocity(invelocity), radius(inradius), Acceleration(glm::vec3({0.f, -20.f, 0.f}))
     {
         inverseMass = 1.f/mass;
+        clearForce();
     }
     const glm::vec3  getPosition()
     {

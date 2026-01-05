@@ -17,6 +17,7 @@
 #include "Texture.h"
 #include "Sphere.h"
 #include "Particle.h"
+#include "ParticleForceRegistry.h"
 #include "Timer.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -245,6 +246,7 @@ int main()
     double thisTime, deltaTime;
 
     Timer timer;
+    ParticleForceRegistry forceRegistry;
     timer.addTask(0.05, [&](int Times)
     {
         particleArray.push_back(Particle({0.f, 0.f, 0.f}, {glm::cos(glfwGetTime())*5, 10.f, glm::sin(glfwGetTime())*5}, 1.f));
@@ -262,7 +264,7 @@ int main()
 
         //update world
         timer.update(deltaTime);
-        std::vector<std::vector<Particle>::iterator> toRemoveArray;
+        forceRegistry.updateForces(deltaTime);
         for (auto particle = particleArray.begin(); particle < particleArray.end(); ++particle)
         {
             particle->integrate(deltaTime);
