@@ -16,9 +16,13 @@ class ParticleSpring : public ParticleForceGenerator
     double restlength;
 public:
     void updateForce(Particle& particle, double duration) override;
-    ParticleSpring(glm::vec3 anchor, double springConstant, double restlength):
-        anchor(anchor), springConstant(springConstant),restlength(restlength)
+    ParticleSpring(glm::vec3 inanchor, double inspringConstant, double inrestlength):
+        anchor(inanchor), springConstant(inspringConstant),restlength(inrestlength)
     {}
+    inline const glm::vec3 & getAnchor() const
+    {
+        return anchor;
+    }
 };
 
 

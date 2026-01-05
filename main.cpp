@@ -20,6 +20,7 @@
 #include "ParticleForceRegistry.h"
 #include "ParticleSpring.h"
 #include "Timer.h"
+#include "LineVertexLoader.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow * window,double xpos, double ypos);
@@ -253,9 +254,16 @@ int main()
         particleArray.push_back(Particle({0.f, 0.f, 0.f}, {glm::cos(glfwGetTime())*5, 10.f, glm::sin(glfwGetTime())*5}, 1.f));
         return true;
     });*/
-    ParticleSpring spring({4.f, 5.f, 4.f}, 1.f, 2.f);
-    particleArray.push_back(Particle({4.f, 5.f, 4.f}, glm::vec3(0.f), 1.f));
-    forceRegistry.addRegistration(particleArray.back(), spring);
+
+    ParticleSpring spring({4.f, 5.f, 0.f}, 1.f, 2.f);
+    auto bouncy = Particle({0.f, 5.f, 0.f}, {4.f, 0.f, 0.f}, 1.f);
+
+
+    forceRegistry.addRegistration(bouncy, spring);
+
+    LineVertexLoader lineLoader{};
+    lineLoader.Initialize(glm::vec3(0.f), glm::vec3(0.f));
+
 
     while (!glfwWindowShouldClose(window))
     {
@@ -274,6 +282,7 @@ int main()
             particle->integrate(deltaTime);
         }
         std::erase_if(particleArray, [](const Particle& particle){return particle.shouldRemove();});
+        bouncy.integrate(deltaTime);
 
 
         //clear buffers
@@ -298,6 +307,18 @@ int main()
             shader.setMat4("model", glm::value_ptr(model));
             glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
         }
+        model = glm::translate(glm::mat4(1.f), bouncy.getPosition());
+        model = glm::scale(model, glm::vec3(1.f)*bouncy.radius);
+        shader.setMat4("model", glm::value_ptr(model));
+        glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
+
+        model = glm::mat4(1.f);
+        shader.setMat4("model", glm::value_ptr(model));
+        lineLoader.newLine(spring.getAnchor(), bouncy.getPosition());
+        lineLoader.useVertexArray();
+        glDrawArrays(GL_LINES, 0, 2);
+
+
 
         // loop through cubes
         const int circleAmount = 0;
@@ -318,14 +339,14 @@ int main()
         glBindVertexArray(VAO);
 
 
-        int floorCount = 0; //std::floor(std::abs(1 - 2*std::fmod(glfwGetTime()/10.f, (double)1))*100);
+        int floorCount = 50; //std::floor(std::abs(1 - 2*std::fmod(glfwGetTime()/10.f, (double)1))*100);
         for (int i = 0; i < floorCount; i++)
         {
             int offset = (i%20)*5;
 
             std::pair<int, int> position = getNthSpiralPath(i);
-         model = glm::translate(glm::mat4(1.f), glm::vec3(position.first*4, -2.f-(float)offset, position.second*4));
-            model = glm::rotate(model, glm::radians(180.f)*(float)(glfwGetTime()+0.05*i), glm::vec3(1.f, 0.f, 0.f));
+         model = glm::translate(glm::mat4(1.f), glm::vec3(position.first*4, -50.f, position.second*4));
+            model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
             model = glm::scale(model, glm::vec3(4.f, 4.f, 1.f));
             shader.setMat4("model", glm::value_ptr(model));
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

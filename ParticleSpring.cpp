@@ -9,6 +9,8 @@ void ParticleSpring::updateForce(Particle& particle, double duration)
 {
     auto pos = particle.getPosition();
     const auto anchorToParticle = pos - anchor;
-    glm::vec3 force = (float)(springConstant*(glm::length(anchorToParticle) - restlength)) * -glm::normalize(anchorToParticle);
+    if (glm::length(anchorToParticle) <= 0.0001)
+        return;
+    glm::vec3 force = static_cast<float>((springConstant*(glm::length(anchorToParticle) - restlength))) * ((-1.f)*glm::normalize(anchorToParticle));
     particle.addForce(force);
 }

@@ -24,6 +24,8 @@ add_executable(openglSetup main.cpp
         ParticleForceRegistry.h
         ParticleSpring.cpp
         ParticleSpring.h
+        LineVertexLoader.cpp
+        LineVertexLoader.h
 )
 target_link_libraries(openglSetup glfw)
 target_link_libraries(openglSetup glad)
