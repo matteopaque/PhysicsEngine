@@ -18,6 +18,7 @@
 #include "Sphere.h"
 #include "Particle.h"
 #include "ParticleForceRegistry.h"
+#include "ParticleSpring.h"
 #include "Timer.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -247,12 +248,15 @@ int main()
 
     Timer timer;
     ParticleForceRegistry forceRegistry;
-    timer.addTask(0.05, [&](int Times)
+   /* timer.addTask(0.05, [&](int Times)
     {
         particleArray.push_back(Particle({0.f, 0.f, 0.f}, {glm::cos(glfwGetTime())*5, 10.f, glm::sin(glfwGetTime())*5}, 1.f));
-
         return true;
-    });
+    });*/
+    ParticleSpring spring({4.f, 5.f, 4.f}, 1.f, 2.f);
+    particleArray.push_back(Particle({4.f, 5.f, 4.f}, glm::vec3(0.f), 1.f));
+    forceRegistry.addRegistration(particleArray.back(), spring);
+
     while (!glfwWindowShouldClose(window))
     {
         thisTime = glfwGetTime();

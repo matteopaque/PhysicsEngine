@@ -21,7 +21,10 @@ add_executable(openglSetup main.cpp
         Timer.h
         ParticleForceGenerator.h
         ParticleForceRegistry.cpp
-        ParticleForceRegistry.h)
+        ParticleForceRegistry.h
+        ParticleSpring.cpp
+        ParticleSpring.h
+)
 target_link_libraries(openglSetup glfw)
 target_link_libraries(openglSetup glad)
 target_link_libraries(openglSetup glm::glm)
