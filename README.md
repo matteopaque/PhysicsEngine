@@ -1,7 +1,5 @@
 # Physics Engine
 
-##information
-
 This is a project to learn about 3d physics simulation and graphics.
 
 This is using Opengl's programmable pipeline; I learned how shaders, vertex array objects, and vertex attributes interact to produce visuals, and they amount of control they offer.
