@@ -21,6 +21,7 @@
 #include "ParticleSpring.h"
 #include "Timer.h"
 #include "LineVertexLoader.h"
+#include "Render2D.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow * window,double xpos, double ypos);
@@ -31,6 +32,7 @@ void processInput(GLFWwindow* window, double deltaTime);
 const unsigned int SCR_WIDTH {800};
 const unsigned int SCR_HEIGHT { 600};
 
+    std::vector<LineVertexLoader> Lines;
 float vertices[] = {
     -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
     0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
@@ -158,9 +160,10 @@ std::pair<int, int> getNthSpiralPath(int n)
     }
     return position;
 }
+using particleID = unsigned int;
+std::map<particleID, Particle> particleArray;
 
-std::vector<Particle> particleArray;
-
+    auto bouncy = Particle({0.f, 5.f, 0.f}, {4.f, 0.f, 0.f}, 1.f);
 int main()
 {
     // init
@@ -255,14 +258,15 @@ int main()
         return true;
     });*/
 
-    ParticleSpring spring({4.f, 5.f, 0.f}, 1.f, 2.f);
-    auto bouncy = Particle({0.f, 5.f, 0.f}, {4.f, 0.f, 0.f}, 1.f);
+    ParticleSpring spring({4.f, 5.f, 0.f}, 0.99f, 2.f);
 
 
     forceRegistry.addRegistration(bouncy, spring);
 
     LineVertexLoader lineLoader{};
     lineLoader.Initialize(glm::vec3(0.f), glm::vec3(0.f));
+    Render2D vertices2D;
+    vertices2D.InitializeSquare({400.f, 300.f}, 100.f);
 
 
     while (!glfwWindowShouldClose(window))
@@ -277,11 +281,10 @@ int main()
         //update world
         timer.update(deltaTime);
         forceRegistry.updateForces(deltaTime);
-        for (auto particle = particleArray.begin(); particle < particleArray.end(); ++particle)
+        for (auto & particle : particleArray)
         {
-            particle->integrate(deltaTime);
+            particle.second.integrate(deltaTime);
         }
-        std::erase_if(particleArray, [](const Particle& particle){return particle.shouldRemove();});
         bouncy.integrate(deltaTime);
 
 
@@ -302,8 +305,8 @@ int main()
 
         for (auto particle : particleArray)
         {
-            model = glm::translate(glm::mat4(1.f), particle.getPosition());
-            model = glm::scale(model, glm::vec3(1.f)*particle.radius);
+            model = glm::translate(glm::mat4(1.f), particle.second.getPosition());
+            model = glm::scale(model, glm::vec3(1.f)*particle.second.radius);
             shader.setMat4("model", glm::value_ptr(model));
             glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
         }
@@ -317,6 +320,24 @@ int main()
         lineLoader.newLine(spring.getAnchor(), bouncy.getPosition());
         lineLoader.useVertexArray();
         glDrawArrays(GL_LINES, 0, 2);
+        for (auto & line : Lines)
+        {
+            line.useVertexArray();
+            glDrawArrays(GL_LINES, 0, 2);
+        }
+        // 2D FROM HERE
+
+
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        vertices2D.use();
+        projection = glm::ortho(0, 800, 0, 600, -500, 500);
+        shader.setMat4("projection", glm::value_ptr(projection));
+
+        view = glm::mat4(1.f);
+        shader.setMat4("view", glm::value_ptr(view));
+        glDrawArrays(GL_LINES, 0, 6);
+
 
 
 
@@ -387,8 +408,13 @@ void processInput(GLFWwindow* window, double deltaTime)
         cameraPos -= glm::normalize(glm::cross(frontLateral, cameraUp)) * cameraSpeed;
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT))
     {
-        particleArray.push_back(Particle(cameraPos + cameraFront - 0.6f *glm::cross(glm::cross(cameraFront, cameraUp), cameraFront),
-            cameraFront*5.f + glm::vec3({0.f, 4.f, 0.f}), 0.5f));
+        //particleArray.push_back(Particle(cameraPos + cameraFront - 0.6f *glm::cross(glm::cross(cameraFront, cameraUp), cameraFront),
+         //   cameraFront*5.f + glm::vec3({0.f, 4.f, 0.f}), 0.5f));
+
+        Line ray {cameraPos, cameraPos + 5.f*cameraFront};
+        Lines.emplace_back(ray);
+        bouncy.addForce(50.f*ray.IntersectWithSphere(bouncy.getPosition(), bouncy.radius));
+
     }
 
 }
