@@ -15,7 +15,6 @@ class Render2D
 {
     unsigned int VBO;
     unsigned int VAO;
-    Texture texture;
 public:
     // use points in viewport space 800x600
     void Initialize(std::vector<glm::vec2> points);
