@@ -26,6 +26,10 @@ add_executable(openglSetup main.cpp
         ParticleSpring.h
         LineVertexLoader.cpp
         LineVertexLoader.h
+        Line.cpp
+        Line.h
+        Render2D.cpp
+        Render2D.h
 )
 target_link_libraries(openglSetup glfw)
 target_link_libraries(openglSetup glad)

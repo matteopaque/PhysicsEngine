@@ -7,15 +7,21 @@
 #include <glm/vec3.hpp>
 
 #include "glad/glad.h"
+#include "Line.h"
 
 
 class LineVertexLoader
 {
-    unsigned int VBO;
-    unsigned int VAO;
+    unsigned int VBO = 0;
+    unsigned int VAO = 0;
+    bool initialized = false;
 public:
+    LineVertexLoader(Line &line);
+    LineVertexLoader(){};
     void Initialize(glm::vec3 point1, glm::vec3 point2);
+    void Initialize(Line line);
     void newLine(glm::vec3 point1, glm::vec3 point2);
+    void newLine(Line & line);
     void useVertexArray();
 };
 

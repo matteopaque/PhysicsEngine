@@ -25,7 +25,7 @@ public:
     void clearForce();
     void addForce(glm::vec3 toAdd);
     Particle(glm::vec3 inposition, glm::vec3 invelocity, float inradius, float mass = 1.f)
-        : position(inposition), velocity(invelocity), radius(inradius), Acceleration(glm::vec3({0.f, -20.f, 0.f}))
+        : position(inposition), velocity(invelocity), radius(inradius), Acceleration(glm::vec3({0.f, -10.f, 0.f}))
     {
         inverseMass = 1.f/mass;
         clearForce();
