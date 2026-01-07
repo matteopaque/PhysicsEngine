@@ -24,8 +24,8 @@ public:
     bool shouldRemove() const;
     void clearForce();
     void addForce(glm::vec3 toAdd);
-    Particle(glm::vec3 inposition, glm::vec3 invelocity, float inradius, float mass = 1.f)
-        : position(inposition), velocity(invelocity), radius(inradius), Acceleration(glm::vec3({0.f, -10.f, 0.f}))
+    Particle(glm::vec3 inposition, glm::vec3 invelocity, float inradius, float mass = 1.f,glm::vec3 accel =glm::vec3({0.f, -10.f, 0.f}))
+        : position(inposition), velocity(invelocity), radius(inradius), Acceleration(accel)
     {
         inverseMass = 1.f/mass;
         clearForce();

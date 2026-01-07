@@ -1,38 +1,43 @@
+#define STB_IMAGE_IMPLEMENTATION
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <iostream>
+#include <iterator>
+#include <string>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <fstream>
-#include <string>
-#include <iterator>
-#define STB_IMAGE_IMPLEMENTATION
 #include <algorithm>
+#include <deque>
 
-#include "stb_image.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "Shader.h"
-#include "Texture.h"
-#include "Sphere.h"
+#include "LineVertexLoader.h"
 #include "Particle.h"
 #include "ParticleForceRegistry.h"
 #include "ParticleSpring.h"
-#include "Timer.h"
-#include "LineVertexLoader.h"
 #include "Render2D.h"
+#include "Shader.h"
+#include "Sphere.h"
+#include "stb_image.h"
+#include "Texture.h"
+#include "Timer.h"
+#include "glad/include/glad/glad.h"
+
+
+using ParticleMap = std::map<int, Particle>;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow * window,double xpos, double ypos);
 void scroll_callback(GLFWwindow * window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window, double deltaTime);
+void processInput(GLFWwindow* window, double deltaTime, ParticleMap &particleArray);
 
 
 const unsigned int SCR_WIDTH {800};
 const unsigned int SCR_HEIGHT { 600};
 
-    std::vector<LineVertexLoader> Lines;
+    std::deque<LineVertexLoader> Lines;
 float vertices[] = {
     -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
     0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
@@ -160,10 +165,11 @@ std::pair<int, int> getNthSpiralPath(int n)
     }
     return position;
 }
-using particleID = unsigned int;
-std::map<particleID, Particle> particleArray;
+using particleID = int;
+particleID newParticleID = 0;
+using generatorID = int;
+generatorID newGeneratorID = 0;
 
-    auto bouncy = Particle({0.f, 5.f, 0.f}, {4.f, 0.f, 0.f}, 10.f);
 int main()
 {
     // init
@@ -250,16 +256,24 @@ int main()
     double lastTime = glfwGetTime();
     double thisTime, deltaTime;
 
+    // timer
     Timer timer;
-    ParticleForceRegistry forceRegistry;
+    // particle list and generator list
+    ParticleMap particleArray;
+    std::map<generatorID, std::unique_ptr<ParticleForceGenerator>> generatorArray;
+    ParticleForceRegistry forceRegistry(particleArray, generatorArray);
    /* timer.addTask(0.05, [&](int Times)
     {
         particleArray.push_back(Particle({0.f, 0.f, 0.f}, {glm::cos(glfwGetTime())*5, 10.f, glm::sin(glfwGetTime())*5}, 1.f));
         return true;
     });*/
+    particleArray.emplace(newParticleID, Particle({0.f, 5.f, 0.f}, {4.f, 0.f, 0.f}, 10.f));
+    auto bouncy = newParticleID;
+    newParticleID++;
 
-    ParticleSpring spring({4.f, 5.f, 0.f}, 0.99f, 2.f);
-
+    generatorArray[newGeneratorID] = std::make_unique<ParticleSpring>(glm::vec3({4.f, 5.f, 0.f}), 0.99f, 2.f);
+    auto spring = newGeneratorID;
+    newGeneratorID++;
 
     forceRegistry.addRegistration(bouncy, spring);
 
@@ -276,16 +290,22 @@ int main()
         lastTime = thisTime;
 
         //input
-        processInput(window, deltaTime);
+        processInput(window, deltaTime, particleArray);
 
         //update world
         timer.update(deltaTime);
         forceRegistry.updateForces(deltaTime);
+        std::vector<int> toRemove;
         for (auto & particle : particleArray)
         {
             particle.second.integrate(deltaTime);
+            if (particle.second.radius<0.3f)
+                toRemove.push_back(particle.first);
         }
-        bouncy.integrate(deltaTime);
+        for (auto remove : toRemove)
+        {
+            particleArray.erase(remove);
+        }
 
 
         //clear buffers
@@ -303,6 +323,7 @@ int main()
         projection = glm::perspective(glm::radians(fov), 800.f/600.f, 0.1f, 1000.f);
         shader.setMat4("projection", glm::value_ptr(projection));
 
+        // particle render
         for (auto particle : particleArray)
         {
             model = glm::translate(glm::mat4(1.f), particle.second.getPosition());
@@ -310,14 +331,11 @@ int main()
             shader.setMat4("model", glm::value_ptr(model));
             glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
         }
-        model = glm::translate(glm::mat4(1.f), bouncy.getPosition());
-        model = glm::scale(model, glm::vec3(1.f)*bouncy.radius);
-        shader.setMat4("model", glm::value_ptr(model));
-        glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
 
+        // lines render
         model = glm::mat4(1.f);
         shader.setMat4("model", glm::value_ptr(model));
-        lineLoader.newLine(spring.getAnchor(), bouncy.getPosition());
+        lineLoader.newLine(dynamic_cast<ParticleSpring*>(generatorArray[spring].get())->getAnchor(), particleArray.at(bouncy).getPosition());
         lineLoader.useVertexArray();
         glDrawArrays(GL_LINES, 0, 2);
         for (auto & line : Lines)
@@ -385,8 +403,11 @@ int main()
     return 0;
 }
 
-void processInput(GLFWwindow* window, double deltaTime)
+void processInput(GLFWwindow* window, double deltaTime, ParticleMap &particleArray)
 {
+    //TODO don't know if this being static will cause problems
+    static Timer timer;
+    timer.update(deltaTime);
     glm::mat3 xzProjection {
             1, 0, 0,
             0, 0, 0,
@@ -413,9 +434,23 @@ void processInput(GLFWwindow* window, double deltaTime)
         //particleArray.push_back(Particle(cameraPos + cameraFront - 0.6f *glm::cross(glm::cross(cameraFront, cameraUp), cameraFront),
          //   cameraFront*5.f + glm::vec3({0.f, 4.f, 0.f}), 0.5f));
 
-        Line ray {cameraPos, cameraPos + 500.f*cameraFront};
-        Lines.emplace_back(ray);
-        bouncy.addForce(50.f*ray.IntersectWithSphere(bouncy.getPosition(), bouncy.radius));
+        Line ray {cameraPos + glm::vec3(0.f, -0.5f, 0.f), cameraPos + 500.f*cameraFront};
+        // TODO make line delete the vertex array upon class deletion
+            Lines.emplace_back(ray);
+        // timers dont run instantly remember, they wait time before
+        timer.addTask(0.5f, [&](int times)
+        {
+                Lines.pop_front();
+                return false;
+        });
+        for (auto & particlePair : particleArray)
+        {
+            constexpr float damageAmount = 0.1f;
+            auto force = 50.f*ray.IntersectWithSphere(particlePair.second.getPosition(), particlePair.second.radius);
+            particlePair.second.addForce(force);
+            particlePair.second.radius -= damageAmount*glm::length(force) *deltaTime;
+
+        }
 
     }
 

@@ -35,7 +35,7 @@ void LineVertexLoader::newLine(Line& line)
 {
     newLine(line.p1, line.p2);
 }
-LineVertexLoader::LineVertexLoader(Line& line)
+LineVertexLoader::LineVertexLoader( const Line& line)
 {
     Initialize(line);
 }

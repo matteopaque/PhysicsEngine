@@ -16,7 +16,7 @@ public:
     {
         return p2 - p1;
     }
-    glm::vec3 IntersectWithSphere(glm::vec3 center, float radius)
+    glm::vec3 IntersectWithSphere(glm::vec3 center, float radius) const
     {
         auto D = glm::normalize(p1ToP2());
         auto M = p1-center;
@@ -29,7 +29,7 @@ public:
         {
             const float T = -(B/2);
             if (T >= 0)
-                return center - (p1 = T*D);
+                return center - (p1 + T*D);
             return glm::vec3(0.f);
         }
         const float T1 = (-B+std::sqrtf(discriminant))/2.f;
@@ -37,7 +37,7 @@ public:
         const float T = std::min(T1, T2);
         if (T>=0)
         {
-            return center-(p1 + D*T);
+            return glm::normalize(center-(p1 + D*T));
         }
         return glm::vec3(0.f);
 

@@ -16,7 +16,7 @@ class LineVertexLoader
     unsigned int VAO = 0;
     bool initialized = false;
 public:
-    LineVertexLoader(Line &line);
+    LineVertexLoader(const Line &line);
     LineVertexLoader(){};
     void Initialize(glm::vec3 point1, glm::vec3 point2);
     void Initialize(Line line);
