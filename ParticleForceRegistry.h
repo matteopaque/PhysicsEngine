@@ -21,7 +21,12 @@ class ParticleForceRegistry
     std::map<int, std::unique_ptr<ParticleForceGenerator>>& generators;
 public:
     ParticleForceRegistry(std::map<int,Particle>& particles, std::map<int,std::unique_ptr<ParticleForceGenerator>>& generators):
+
     particles(particles), generators(generators) {}
+    Registry &getRegistrations()
+    {
+        return registrations;
+    }
     void addRegistration(int particleID, int generatorID);
     void updateForces(double deltaTime);
     void clear();

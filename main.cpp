@@ -28,6 +28,7 @@
 
 using ParticleMap = std::map<int, Particle>;
 
+bool lose = false;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow * window,double xpos, double ypos);
 void scroll_callback(GLFWwindow * window, double xoffset, double yoffset);
@@ -262,20 +263,34 @@ int main()
     ParticleMap particleArray;
     std::map<generatorID, std::unique_ptr<ParticleForceGenerator>> generatorArray;
     ParticleForceRegistry forceRegistry(particleArray, generatorArray);
-   /* timer.addTask(0.05, [&](int Times)
+
+    /* timer.addTask(0.05, [&](int Times)
+     {
+         particleArray.push_back(Particle({0.f, 0.f, 0.f}, {glm::cos(glfwGetTime())*5, 10.f, glm::sin(glfwGetTime())*5}, 1.f));
+         return true;
+     });*/
+    timer.addTask(1.f, [&](int times)
     {
-        particleArray.push_back(Particle({0.f, 0.f, 0.f}, {glm::cos(glfwGetTime())*5, 10.f, glm::sin(glfwGetTime())*5}, 1.f));
+        glm::vec3 position, velocity;
+        srand(glfwGetTime()*100);
+        float rand1 = rand()/(float)RAND_MAX;
+        float rand2 = rand()/(float)RAND_MAX;
+        float rand3 = rand()/(float)RAND_MAX;
+        float rand4 = rand()/(float)RAND_MAX;
+        position = cameraPos + glm::vec3((10+5*rand1)*glm::cos(rand2*2.f*glm::pi<float>()), rand3*5.f+10.f, (10+5*rand1)*glm::sin(rand2*2.f*glm::pi<float>()));
+        velocity = rand4*7*glm::normalize(cameraPos-position);
+        particleArray.emplace(newParticleID, Particle(position, velocity, 3.f));
+        auto bouncy = newParticleID;
+        newParticleID++;
+
+        generatorArray[newGeneratorID] = std::make_unique<ParticleSpring>(position, 0.99f, 2.f);
+        auto spring = newGeneratorID;
+        newGeneratorID++;
+        forceRegistry.addRegistration(bouncy, spring);
         return true;
-    });*/
-    particleArray.emplace(newParticleID, Particle({0.f, 5.f, 0.f}, {4.f, 0.f, 0.f}, 10.f));
-    auto bouncy = newParticleID;
-    newParticleID++;
+    });
 
-    generatorArray[newGeneratorID] = std::make_unique<ParticleSpring>(glm::vec3({4.f, 5.f, 0.f}), 0.99f, 2.f);
-    auto spring = newGeneratorID;
-    newGeneratorID++;
 
-    forceRegistry.addRegistration(bouncy, spring);
 
     LineVertexLoader lineLoader{};
     lineLoader.Initialize(glm::vec3(0.f), glm::vec3(0.f));
@@ -296,102 +311,136 @@ int main()
         timer.update(deltaTime);
         forceRegistry.updateForces(deltaTime);
         std::vector<int> toRemove;
+
         for (auto & particle : particleArray)
         {
             particle.second.integrate(deltaTime);
-            if (particle.second.radius<0.3f)
+            if (particle.second.radius<0.7f)
                 toRemove.push_back(particle.first);
+            if (glm::length(particle.second.getPosition()-cameraPos)<particle.second.radius)
+            {
+                lose = true;
+
+            }
         }
+
         for (auto remove : toRemove)
         {
             particleArray.erase(remove);
         }
-
-
-        //clear buffers
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // set right shader and textures and vertex array
-        shader.use();
-        textureContext.use();
-        glBindVertexArray(sphereVao);
-
-
-        // set right transformation matrices
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        shader.setMat4("view", glm::value_ptr(view));
-        projection = glm::perspective(glm::radians(fov), 800.f/600.f, 0.1f, 1000.f);
-        shader.setMat4("projection", glm::value_ptr(projection));
-
-        // particle render
-        for (auto particle : particleArray)
+        if (lose)
         {
-            model = glm::translate(glm::mat4(1.f), particle.second.getPosition());
-            model = glm::scale(model, glm::vec3(1.f)*particle.second.radius);
-            shader.setMat4("model", glm::value_ptr(model));
-            glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
+            particleArray.clear();
         }
 
-        // lines render
-        model = glm::mat4(1.f);
-        shader.setMat4("model", glm::value_ptr(model));
-        lineLoader.newLine(dynamic_cast<ParticleSpring*>(generatorArray[spring].get())->getAnchor(), particleArray.at(bouncy).getPosition());
-        lineLoader.useVertexArray();
-        glDrawArrays(GL_LINES, 0, 2);
-        for (auto & line : Lines)
+        if (!lose)
         {
-            line.useVertexArray();
-            glDrawArrays(GL_LINES, 0, 2);
-        }
-
-        glBindVertexArray(VAO);
-        int floorCount = 64; //std::floor(std::abs(1 - 2*std::fmod(glfwGetTime()/10.f, (double)1))*100);
-        for (int i = 0; i < floorCount; i++)
-        {
-            int offset = (i%20)*5;
-
-            std::pair<int, int> position = getNthSpiralPath(i);
-            model = glm::translate(glm::mat4(1.f), glm::vec3(position.first*200, -300.f, position.second*200));
-            model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
-            model = glm::scale(model, glm::vec3(200.f, 200.f, 1.f));
-            shader.setMat4("model", glm::value_ptr(model));
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        }
-        // 2D FROM HERE
+            //clear buffers
+            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            // set right shader and textures and vertex array
+            shader.use();
+            textureContext.use();
+            glBindVertexArray(sphereVao);
 
 
-        //glClear(GL_DEPTH_BUFFER_BIT);
+            // set right transformation matrices
+            view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+            shader.setMat4("view", glm::value_ptr(view));
+            projection = glm::perspective(glm::radians(fov), 800.f/600.f, 0.1f, 1000.f);
+            shader.setMat4("projection", glm::value_ptr(projection));
 
-        vertices2D.use();
-        projection = glm::ortho(0.f, 800.f, 0.f, 600.f, -1.f, 1.f);
-        shader.setMat4("projection", glm::value_ptr(projection));
-        model = glm::mat4(1.f);
-        shader.setMat4("model", glm::value_ptr(model));
-
-        view = glm::mat4(1.f);
-        shader.setMat4("view", glm::value_ptr(view));
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-
-
-
-        // loop through cubes
-        const int circleAmount = 0;
-        for (int k=1; k<=circleAmount; k++)
-        for (int j=1; j<=circleAmount; j++)
-        {
-            for (std::size_t i = 0; i < cubePositons.size(); i++)
+            // particle render
+            for (auto particle : particleArray)
             {
-                model = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 1.f*k, 0.f));
-                model = glm::rotate(model, (float)j, glm::normalize(glm::vec3(1.f, 0.f, 0.f)));
-                model = glm::translate(model, cubePositons.at(i) - glm::vec3(std::sin(glfwGetTime()-0.25*k)*5*j, 1.f, std::cos(glfwGetTime()-0.25*k)*5*j));
-                model = glm::rotate(model, (float)(glfwGetTime()-0.25*k), glm::normalize(glm::vec3(1.f, 2.f, 0.f)));
-
+                model = glm::translate(glm::mat4(1.f), particle.second.getPosition());
+                model = glm::scale(model, glm::vec3(1.f)*particle.second.radius);
                 shader.setMat4("model", glm::value_ptr(model));
                 glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
             }
-        }
 
+            // lines render
+            model = glm::mat4(1.f);
+            shader.setMat4("model", glm::value_ptr(model));
+            //lineLoader.newLine(dynamic_cast<ParticleSpring*>(generatorArray[spring].get())->getAnchor(), particleArray.at(bouncy).getPosition());
+            lineLoader.useVertexArray();
+            glDrawArrays(GL_LINES, 0, 2);
+            for (auto & line : Lines)
+            {
+                line.useVertexArray();
+                glDrawArrays(GL_LINES, 0, 2);
+            }
+            forceRegistry.updateForces(0.f);
+            auto &registry = forceRegistry.getRegistrations();
+            for (auto & pair : registry)
+            {
+                auto spring = pair.second;
+                auto bouncy = pair.first;
+
+                lineLoader.newLine(dynamic_cast<ParticleSpring*>(generatorArray[spring].get())->getAnchor(), particleArray.at(bouncy).getPosition());
+                lineLoader.useVertexArray();
+                glDrawArrays(GL_LINES, 0, 2);
+
+            }
+
+            glBindVertexArray(VAO);
+            int floorCount = 64; //std::floor(std::abs(1 - 2*std::fmod(glfwGetTime()/10.f, (double)1))*100);
+            for (int i = 0; i < floorCount; i++)
+            {
+                int offset = (i%20)*5;
+
+                std::pair<int, int> position = getNthSpiralPath(i);
+                model = glm::translate(glm::mat4(1.f), glm::vec3(position.first*200, -300.f, position.second*200));
+                model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
+                model = glm::scale(model, glm::vec3(200.f, 200.f, 1.f));
+                shader.setMat4("model", glm::value_ptr(model));
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            }for (int i = 0; i < floorCount; i++)
+            {
+                int offset = (i%20)*5;
+
+                std::pair<int, int> position = getNthSpiralPath(i);
+                model = glm::translate(glm::mat4(1.f), glm::vec3(position.first*200, 300.f, position.second*200));
+                model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
+                model = glm::scale(model, glm::vec3(200.f, 200.f, 1.f));
+                shader.setMat4("model", glm::value_ptr(model));
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            }
+            // 2D FROM HERE
+
+
+            //glClear(GL_DEPTH_BUFFER_BIT);
+
+            vertices2D.use();
+            projection = glm::ortho(0.f, 800.f, 0.f, 600.f, -1.f, 1.f);
+            shader.setMat4("projection", glm::value_ptr(projection));
+            model = glm::mat4(1.f);
+            shader.setMat4("model", glm::value_ptr(model));
+
+            view = glm::mat4(1.f);
+            shader.setMat4("view", glm::value_ptr(view));
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+
+
+            // loop through cubes
+            const int circleAmount = 0;
+            for (int k=1; k<=circleAmount; k++)
+                for (int j=1; j<=circleAmount; j++)
+                {
+                    for (std::size_t i = 0; i < cubePositons.size(); i++)
+                    {
+                        model = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 1.f*k, 0.f));
+                        model = glm::rotate(model, (float)j, glm::normalize(glm::vec3(1.f, 0.f, 0.f)));
+                        model = glm::translate(model, cubePositons.at(i) - glm::vec3(std::sin(glfwGetTime()-0.25*k)*5*j, 1.f, std::cos(glfwGetTime()-0.25*k)*5*j));
+                        model = glm::rotate(model, (float)(glfwGetTime()-0.25*k), glm::normalize(glm::vec3(1.f, 2.f, 0.f)));
+
+                        shader.setMat4("model", glm::value_ptr(model));
+                        glDrawElements(GL_TRIANGLES, sphere.getIndicesSize(), GL_UNSIGNED_INT, 0);
+                    }
+                }
+        }
 
         // show screen and poll events
         glfwSwapBuffers(window);
@@ -422,6 +471,9 @@ void processInput(GLFWwindow* window, double deltaTime, ParticleMap &particleArr
     {
         cameraPos += cameraSpeed *frontLateral;
     }
+    if (lose)
+        if (glfwGetKey(window, GLFW_KEY_SPACE))
+            lose = false;
     if (glfwGetKey(window, GLFW_KEY_R)== GLFW_PRESS)
         cameraPos -= cameraSpeed *frontLateral;
     if (glfwGetKey(window, GLFW_KEY_S)== GLFW_PRESS)

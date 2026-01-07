@@ -36,10 +36,10 @@ void ParticleForceRegistry::updateForces(double deltaTime)
         const auto generator = registration.second;
         generators.at(generator)->updateForce(particles.at(particle), deltaTime);
         }else
-        toRemove.push_back(registration);
+            toRemove.push_back(registration);
         for (auto remove : toRemove)
         {
-            erase(registrations, registration);
+            erase(registrations, remove);
         }
 
     }

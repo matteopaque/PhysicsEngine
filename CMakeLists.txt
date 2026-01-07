@@ -6,7 +6,6 @@ find_package(glm REQUIRED)
 set(CMAKE_CXX_STANDARD 20)
 add_library(glad STATIC ${PROJECT_SOURCE_DIR}/glad/src/glad.c ${PROJECT_SOURCE_DIR}/glad/include/glad/glad.h)
 target_include_directories(glad PUBLIC ${PROJECT_SOURCE_DIR}/glad/include)
-include_directories(glad/include)
 
 add_executable(openglSetup main.cpp
         Shader.cpp
